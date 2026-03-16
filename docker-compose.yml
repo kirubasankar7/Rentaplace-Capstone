@@ -1,0 +1,93 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rentaplace_db
+    environment:
+      POSTGRES_DB: rentaplace
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  postgres_msg:
+    image: postgres:16-alpine
+    container_name: rentaplace_msg_db
+    environment:
+      POSTGRES_DB: rentaplace_messaging
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_msg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  api:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: rentaplace_api
+    ports:
+      - "5000:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres;Database=rentaplace;Username=postgres;Password=postgres123
+      - Jwt__Key=RentAPlace_SuperSecret_JWT_Key_2024_MinimumOf32Characters!
+      - Jwt__Issuer=RentAPlaceAPI
+      - Jwt__Audience=RentAPlaceClient
+      - Email__SmtpHost=smtp.gmail.com
+      - Email__SmtpPort=587
+      - Email__From=noreply@rentaplace.com
+      - Email__Password=your_email_password_here
+      - Email__Enabled=false
+    depends_on:
+      postgres:
+        condition: service_healthy
+    volumes:
+      - uploads:/app/wwwroot/uploads
+
+  messaging:
+    build:
+      context: ./messaging
+      dockerfile: Dockerfile
+    container_name: rentaplace_messaging
+    ports:
+      - "5001:8080"
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+      - ConnectionStrings__DefaultConnection=Host=postgres_msg;Database=rentaplace_messaging;Username=postgres;Password=postgres123
+      - Jwt__Key=RentAPlace_SuperSecret_JWT_Key_2024_MinimumOf32Characters!
+      - Jwt__Issuer=RentAPlaceAPI
+      - Jwt__Audience=RentAPlaceClient
+    depends_on:
+      postgres_msg:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: rentaplace_frontend
+    ports:
+      - "4200:80"
+    depends_on:
+      - api
+      - messaging
+
+volumes:
+  pgdata:
+  pgdata_msg:
+  uploads:

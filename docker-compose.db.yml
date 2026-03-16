@@ -1,0 +1,28 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: rentaplace_db
+    environment:
+      POSTGRES_DB: rentaplace
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5434:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  postgres_msg:
+    image: postgres:16-alpine
+    container_name: rentaplace_msg_db
+    environment:
+      POSTGRES_DB: rentaplace_messaging
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+    ports:
+      - "5433:5432"
+    volumes:
+      - pgdata_msg:/var/lib/postgresql/data
+
+volumes:
+  pgdata:
+  pgdata_msg:
